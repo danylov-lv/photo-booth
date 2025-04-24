@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>Photo Booth</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/gallery">Gallery</a></li>
+                {{if .Authenticated}}
+                <li><a href="/camera">Camera</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+                {{else}}
+                <li><a href="/register">Register</a></li>
+                <li><a href="/login">Login</a></li>
+                {{end}}
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <form action="/login" method="POST">
+            <h2>Login</h2>
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+
+            <button type="submit">Login</button>
+
+            <p class="reset-password">
+                <a href="/password/reset">Forgot your password?</a>
+            </p>
+        </form>
+        <p>Don't have an account? <a href="/register">Register here</a></p>
+    </main>
+    <footer>
+        <p>&copy; 2025 Photo Booth</p>
+    </footer>
+</body>
+
+</html>

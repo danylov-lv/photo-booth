@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <title>Gallery</title>
+</head>
+
+<body>
+    <header>
+        <h1>Photo Booth</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/gallery">Gallery</a></li>
+                {{if .Authenticated}}
+                <li><a href="/camera">Camera</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+                {{else}}
+                <li><a href="/register">Register</a></li>
+                <li><a href="/login">Login</a></li>
+                {{end}}
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="gallery">
+            {{range .Images}}
+            <div class="image-container">
+                <img src="{{.FilePath}}" alt="Image">
+                <div class="image-info">
+                    <p>Likes: {{.Likes}}</p>
+                    <form action="/like" method="POST" class="like-form">
+                        <input type="hidden" name="image_id" value="{{.ID}}">
+                        <button type="submit">Like</button>
+                    </form>
+                    <form action="/comments/add" method="POST" class="comment-form">
+                        <input type="hidden" name="image_id" value="{{.ID}}">
+                        <textarea name="content" placeholder="Add a comment" required></textarea>
+                        <button type="submit">Comment</button>
+                    </form>
+                    {{if .IsOwner}}
+                    <form action="/images/delete" method="POST" class="delete-form">
+                        <input type="hidden" name="image_id" value="{{.ID}}">
+                        <button type="submit" class="delete-button">Delete</button>
+                    </form>
+                    {{end}}
+                    <div class="comments">
+                        <p><strong>Comments:</strong></p>
+                        {{range .Comments}}
+                        <p><strong>{{.Username}}:</strong> {{.Content}}</p>
+                        {{else}}
+                        <p>No comments yet.</p>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            <div id="loading" style="display: none;">Loading...</div>
+            {{else}}
+            <p>No images found.</p>
+            {{end}}
+        </section>
+    </main>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const imageContainer = document.getElementById("gallery");
+            const loading = document.getElementById("loading");
+            let page = 1;
+            let isLoading = false;
+
+            async function loadMoreImages() {
+                if (isLoading) return;
+                isLoading = true;
+                loading.style.display = "block";
+
+                try {
+                    const response = await fetch(`/gallery?page=${page + 1}`, {
+                        headers: { "X-Requested-With": "XMLHttpRequest" },
+                    });
+                    if (!response.ok) throw new Error("Failed to load images");
+
+                    const images = await response.json();
+                    if (images.length === 0) {
+                        window.removeEventListener("scroll", handleScroll);
+                        loading.style.display = "none";
+                        return;
+                    }
+
+                    images.forEach((image) => {
+                        const imageDiv = document.createElement("div");
+                        imageDiv.className = "image-container";
+                        imageDiv.innerHTML = `
+                            <img src="${image.FilePath}" alt="Image">
+                            <div class="image-info">
+                                <p>Likes: ${image.Likes}</p>
+                                <form action="/like" method="POST" class="like-form">
+                                    <input type="hidden" name="image_id" value="${image.ID}">
+                                    <button type="submit">Like</button>
+                                </form>
+                                <form action="/comments/add" method="POST" class="comment-form">
+                                    <input type="hidden" name="image_id" value="${image.ID}">
+                                    <textarea name="content" placeholder="Add a comment" required></textarea>
+                                    <button type="submit">Comment</button>
+                                </form>
+                                ${image.IsOwner ? `
+                                    <form action="/images/delete" method="POST" class="delete-form">
+                                        <input type="hidden" name="image_id" value="${image.ID}">
+                                        <button type="submit" class="delete-button">Delete</button>
+                                    </form>` : ''}
+                                <div class="comments">
+                                    <p><strong>Comments:</strong></p>
+                                    ${image.Comments.length > 0 ? image.Comments.map(comment => `<p><strong>${comment.Username}:</strong> ${comment.Content}</p>`).join('') : '<p>No comments yet.</p>'}
+                                </div>
+                            </div>
+                        `;
+                        imageContainer.appendChild(imageDiv);
+                    });
+
+                    page++;
+                } catch (error) {
+                    console.error(error);
+                } finally {
+                    isLoading = false;
+                    loading.style.display = "none";
+                }
+            }
+
+            function handleScroll() {
+                const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    loadMoreImages();
+                }
+            }
+
+            window.addEventListener("scroll", handleScroll);
+        });
+    </script>
+
+    <footer>
+        <p>&copy; 2025 Photo Booth</p>
+    </footer>
+</body>
+
+</html>

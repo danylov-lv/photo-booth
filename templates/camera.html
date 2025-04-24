@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>Photo Booth</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/gallery">Gallery</a></li>
+                {{if .Authenticated}}
+                <li><a href="/camera">Camera</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+                {{else}}
+                <li><a href="/register">Register</a></li>
+                <li><a href="/login">Login</a></li>
+                {{end}}
+            </ul>
+        </nav>
+    </header>
+    <main id="camera-page">
+        <section id="camera-section">
+            <h2>Take a Photo</h2>
+            <div id="camera-container">
+                <canvas id="canvas"></canvas>
+                <video id="video" autoplay></video>
+                <img id="placeholder" src="/static/img/placeholder.jpg" alt="Camera not available"
+                    style="display: none;">
+                <button id="capture-button" disabled>Capture</button>
+            </div>
+
+            <!-- Форма для завантаження зображення -->
+            <div id="upload-image-container">
+                <h3>Or Upload an Image</h3>
+                <form id="image-upload-form">
+                    <input type="file" id="image-upload" accept="image/*">
+                    <button type="button" id="upload-image-button">Upload Image</button>
+                </form>
+            </div>
+
+            <form id="upload-form" action="/camera" method="post" enctype="multipart/form-data" style="display: none;">
+                <input type="hidden" id="image-data" name="image">
+                <input type="hidden" id="overlay-data" name="overlay">
+                <button type="button" id="cancel-button" style="display: none;">Cancel</button>
+                <button type="submit" id="upload-button" disabled>Upload</button>
+            </form>
+            <div id="overlays">
+                <h3>Select an Overlay</h3>
+                {{range .Overlays}}
+                <img src="/static/img/overlays/{{.}}" class="overlay" onclick="selectOverlay(this)">
+                {{end}}
+            </div>
+        </section>
+        <aside id="recent-images">
+            <h3>Your Recent Images</h3>
+            <ul>
+                {{range .RecentImages}}
+                <li>
+                    <img src="{{.FilePath}}" alt="Recent Image">
+                </li>
+                {{else}}
+                <p>No recent images found.</p>
+                {{end}}
+            </ul>
+        </aside>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Photo Booth</p>
+    </footer>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const placeholder = document.getElementById('placeholder');
+        const captureButton = document.getElementById('capture-button');
+        const uploadButton = document.getElementById('upload-button');
+        const cancelButton = document.getElementById('cancel-button');
+        const imageDataInput = document.getElementById('image-data');
+        const overlayDataInput = document.getElementById('overlay-data');
+        const uploadForm = document.getElementById('upload-form');
+        const uploadImageInput = document.getElementById('image-upload');
+        const uploadImageButton = document.getElementById('upload-image-button');
+        let selectedOverlay = null;
+
+        const context = canvas.getContext('2d');
+        let overlayImage = null;
+        let isCapturing = true;
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+
+                video.addEventListener('play', () => {
+                    function drawFrame() {
+                        if (isCapturing && !video.paused && !video.ended) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+
+                            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                            if (overlayImage) {
+                                context.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
+                            }
+
+                            requestAnimationFrame(drawFrame);
+                        }
+                    }
+                    drawFrame();
+                });
+            })
+            .catch((err) => {
+                console.error('Error accessing the camera:', err);
+                placeholder.style.display = 'block';
+            });
+
+        function selectOverlay(element) {
+            selectedOverlay = element.src;
+            overlayDataInput.value = selectedOverlay;
+
+            overlayImage = new Image();
+            overlayImage.src = selectedOverlay;
+
+            overlayImage.onload = () => {
+                if (!isCapturing) {
+                    const file = uploadImageInput.files[0];
+
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+
+                                context.clearRect(0, 0, canvas.width, canvas.height);
+                                context.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                context.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
+                            };
+                            img.src = event.target.result;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }
+            };
+            captureButton.disabled = false;
+
+            console.log("Selected overlay:", selectedOverlay);
+        }
+
+        captureButton.addEventListener('click', () => {
+            isCapturing = false;
+
+            const imageData = canvas.toDataURL('image/png');
+            imageDataInput.value = imageData;
+
+            captureButton.style.display = 'none';
+
+            uploadForm.style.display = 'block';
+
+            const overlays = document.querySelectorAll('.overlay');
+            overlays.forEach((overlay) => {
+                overlay.style.pointerEvents = 'none';
+                overlay.style.opacity = '0.5';
+            });
+
+            cancelButton.style.display = 'inline-block';
+
+            uploadButton.disabled = false;
+
+            console.log("Image captured and saved to hidden input.");
+        });
+
+        cancelButton.addEventListener('click', () => {
+            isCapturing = true;
+
+            imageDataInput.value = '';
+            overlayDataInput.value = '';
+            selectedOverlay = null;
+            overlayImage = null;
+
+            uploadButton.disabled = true;
+
+            const overlays = document.querySelectorAll('.overlay');
+            overlays.forEach((overlay) => {
+                overlay.style.pointerEvents = 'auto';
+                overlay.style.opacity = '1';
+            });
+
+            uploadForm.style.display = 'none';
+
+            captureButton.style.display = 'inline-block';
+            captureButton.disabled = true;
+
+
+            if (video.readyState >= 2) {
+                function drawFrame() {
+                    if (isCapturing && !video.paused && !video.ended) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                        if (overlayImage) {
+                            context.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
+                        }
+
+                        requestAnimationFrame(drawFrame);
+                    }
+                }
+                drawFrame();
+            }
+
+            console.log("Form reset, overlay cleared, and canvas updated.");
+        });
+
+        uploadImageButton.addEventListener('click', () => {
+            const file = uploadImageInput.files[0];
+            if (!file) {
+                alert('Please select an image to upload.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    isCapturing = false;
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+
+                    context.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    if (overlayImage) {
+                        context.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+
+        });
+    </script>
+</body>
+
+</html>

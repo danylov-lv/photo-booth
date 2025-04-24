@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Booth</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+
+<body>
+    <header>
+        <h1>Photo Booth</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/gallery">Gallery</a></li>
+                {{if .Authenticated}}
+                <li><a href="/camera">Camera</a></li>
+                <li><a href="/settings">Settings</a></li>
+                <li><a href="/logout">Logout</a></li>
+                {{else}}
+                <li><a href="/register">Register</a></li>
+                <li><a href="/login">Login</a></li>
+                {{end}}
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section>
+            <h2>Take a Snapshot</h2>
+            <p>Use the camera to take snapshots with fun masks!</p>
+            <a href="/camera" class="button">Go to Camera</a>
+        </section>
+        <section>
+            <h2>View Gallery</h2>
+            <p>Check out the images taken by users.</p>
+            <a href="/gallery" class="button">View Gallery</a>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Photo Booth. All rights reserved.</p>
+    </footer>
+    <script src="/static/js/scripts.js"></script>
+</body>
+
+</html>
