@@ -119,6 +119,8 @@
             .catch((err) => {
                 console.error('Error accessing the camera:', err);
                 placeholder.style.display = 'block';
+                video.style.display = 'none';
+                canvas.style.display = 'none';
             });
 
         function selectOverlay(element) {
